@@ -203,7 +203,15 @@ async function discoverAgents(): Promise<void> {
     }
 
     const card = await res.json() as {
-      agents?: Array<{ id: string; name: string; role: string; goal: string; tools: string[] }>;
+      agents?: Array<{
+        id: string;
+        name: string;
+        role: string;
+        goal: string;
+        tools: string[];
+        workspace: string; // NEW: Phase 4 requirement
+        status: string;    // NEW: Phase 2 sync
+      }>;
     };
 
     if (!card.agents || !Array.isArray(card.agents)) {
@@ -216,19 +224,31 @@ async function discoverAgents(): Promise<void> {
     discoveryStatus.error = null;
 
     for (const agent of card.agents) {
-      // Upsert: create if not exists, update if name already exists
-      const existing = await prisma.agent.findUnique({ where: { name: agent.name } });
-      if (!existing) {
-        await prisma.agent.create({
-          data: {
-            name: agent.name,
-            role: agent.role,
-            goal: agent.goal,
-            systemPrompt: `Auto-registered from Agent Card (${agent.name})`,
-          },
-        });
-        console.log(`✅ Auto-registered new agent: ${agent.name}`);
-      }
+      // Upsert: Sync changes (role, goal, workspace, status) from Factory
+      // Key on "name" as per existing logic, could switch to ID if preferred
+      await prisma.agent.upsert({
+        where: { name: agent.name },
+        update: {
+          role: agent.role,
+          goal: agent.goal,
+          workspace: agent.workspace || 'General',
+          status: agent.status || 'LIVE',
+          // Optionally update description/prompt if desired
+        },
+        create: {
+          // If creating new, try to preserve Factory ID if possible, 
+          // but schema usually generates UUID. 
+          // Let's use name as unique identifier as per existing logic.
+          name: agent.name,
+          role: agent.role,
+          goal: agent.goal,
+          workspace: agent.workspace || 'General',
+          status: agent.status || 'LIVE',
+          systemPrompt: `Auto-registered from Agent Card (${agent.name})`,
+        }
+      });
+
+      console.log(`✅ Synced agent: ${agent.name} (Workspace: ${agent.workspace}, Status: ${agent.status})`);
       discoveryStatus.agentsSynced.push(agent.name);
     }
 
