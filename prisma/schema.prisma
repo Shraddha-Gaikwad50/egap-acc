@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Agent model - represents an AI agent configuration
+model Agent {
+  id           String       @id @default(uuid())
+  name         String       @unique
+  role         String       // e.g., 'HR Assistant'
+  goal         String       // e.g., 'Answer queries about benefits'
+  systemPrompt String       @db.Text
+  tools        Tool[]       @relation("AgentTools")
+  deployments  Deployment[]
+  tasks        Task[]
+  usageLogs    UsageLog[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+// Tool model - represents available tools for agents
+model Tool {
+  id            String  @id @default(uuid())
+  name          String  @unique // e.g., 'vertex_search'
+  description   String
+  configuration Json?   // To store API keys or settings
+  agents        Agent[] @relation("AgentTools")
+}
+
+// Deployment model - represents agent deployment status
+model Deployment {
+  id         String   @id @default(uuid())
+  agent      Agent    @relation(fields: [agentId], references: [id])
+  agentId    String
+  status     String   // e.g., 'PENDING', 'ACTIVE'
+  serviceUrl String?
+  deployedAt DateTime @default(now())
+}
+
+// Task model - represents a pending action for HITL governance
+model Task {
+  id           String   @id @default(uuid())
+  description  String
+  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  inputPayload Json?
+  agent        Agent    @relation(fields: [agentId], references: [id])
+  agentId      String
+  createdAt    DateTime @default(now())
+}
+
+// UsageLog model - FRS Cost Accounting: per-agent token tracking
+model UsageLog {
+  id         String   @id @default(uuid())
+  agent      Agent    @relation(fields: [agentId], references: [id])
+  agentId    String
+  action     String   // e.g., 'tool_call', 'llm_inference', 'resume'
+  tokens     Int      @default(0)
+  costUsd    Float    @default(0)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+}
+
+// TraceSpan model - FRS Trace Map: distributed tracing across services
+model TraceSpan {
+  id          String   @id @default(uuid())
+  traceId     String   // groups all spans for one request flow
+  parentId    String?  // parent span id (null for root spans)
+  service     String   // e.g., 'ingress', 'orchestrator', 'acc'
+  operation   String   // e.g., 'webhook_receive', 'task_create', 'approve'
+  status      String   @default("OK") // OK, ERROR
+  durationMs  Int      @default(0)
+  metadata    Json?
+  startedAt   DateTime @default(now())
+
+  @@index([traceId])
+}
