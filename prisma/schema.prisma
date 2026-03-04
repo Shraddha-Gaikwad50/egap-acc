@@ -15,17 +15,41 @@ datasource db {
 
 // Agent model - represents an AI agent configuration
 model Agent {
-  id           String       @id @default(uuid())
-  name         String       @unique
-  role         String       // e.g., 'HR Assistant'
-  goal         String       // e.g., 'Answer queries about benefits'
-  systemPrompt String       @db.Text
-  tools        Tool[]       @relation("AgentTools")
-  deployments  Deployment[]
-  tasks        Task[]
-  usageLogs    UsageLog[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id              String         @id @default(uuid())
+  name            String         @unique
+  role            String         // e.g., 'HR Assistant'
+  goal            String         // e.g., 'Answer queries about benefits'
+  systemPrompt    String         @db.Text
+  budgetUsd       Float          @default(5.0)  // Per-agent budget limit in USD
+  isActive        Boolean        @default(true) // Auto-shutdown flag
+  currentVersion  Int            @default(1)    // Current version number
+  agentCardUrl    String?        // A2A: Published Agent Card URL (/.well-known/agent.json)
+  adkResourceName String?        // ADK: Vertex AI Agent Engine resource name
+  tools           Tool[]         @relation("AgentTools")
+  deployments     Deployment[]
+  tasks           Task[]
+  usageLogs       UsageLog[]
+  messages        Message[]
+  versions        AgentVersion[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+// AgentVersion model - stores historical snapshots of agent configurations
+model AgentVersion {
+  id           String   @id @default(uuid())
+  agent        Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId      String
+  version      Int
+  name         String
+  role         String
+  goal         String
+  systemPrompt String   @db.Text
+  toolNames    String[] // Tool names at the time of snapshot
+  changedBy    String   @default("admin")
+  createdAt    DateTime @default(now())
+
+  @@unique([agentId, version])
 }
 
 // Tool model - represents available tools for agents
@@ -34,17 +58,20 @@ model Tool {
   name          String  @unique // e.g., 'vertex_search'
   description   String
   configuration Json?   // To store API keys or settings
+  mcpServerUrl  String? // MCP: Remote MCP Server endpoint URL for this tool
+  actionType    String  @default("READ") // MCP Action Gating: READ (auto-execute) or WRITE (requires HITL approval)
   agents        Agent[] @relation("AgentTools")
 }
 
 // Deployment model - represents agent deployment status
 model Deployment {
-  id         String   @id @default(uuid())
-  agent      Agent    @relation(fields: [agentId], references: [id])
-  agentId    String
-  status     String   // e.g., 'PENDING', 'ACTIVE'
-  serviceUrl String?
-  deployedAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  agent         Agent    @relation(fields: [agentId], references: [id])
+  agentId       String
+  status        String   // e.g., 'PENDING', 'ACTIVE'
+  serviceUrl    String?
+  adkSessionId  String?  // ADK: Session reference for suspend/resume (HITL)
+  deployedAt    DateTime @default(now())
 }
 
 // Task model - represents a pending action for HITL governance
@@ -55,7 +82,9 @@ model Task {
   inputPayload Json?
   agent        Agent    @relation(fields: [agentId], references: [id])
   agentId      String
+  traceId      String?  // For Reconciliation: Link to Ingress Trace
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // UsageLog model - FRS Cost Accounting: per-agent token tracking
@@ -83,4 +112,24 @@ model TraceSpan {
   startedAt   DateTime @default(now())
 
   @@index([traceId])
+}
+
+// Message model - represents chat history for Test Flight
+model Message {
+  id        String   @id @default(uuid())
+  role      String   // 'user' | 'assistant'
+  content   String   // @db.Text is not needed in Postgres for unlimited text usually, but keeping String is fine. Default String is text.
+  agent     Agent    @relation(fields: [agentId], references: [id])
+  agentId   String
+  tokens    Int      @default(0)
+  cost      Float    @default(0.0)
+  createdAt DateTime @default(now())
+}
+
+// GlobalSettings model - for System-wide flags like Emergency Stop
+model GlobalSettings {
+  id        String   @id @default(uuid())
+  key       String   @unique // e.g., 'emergency_stop'
+  value     Json     // e.g., { active: true, triggeredBy: 'admin', at: '...' }
+  updatedAt DateTime @updatedAt
 }

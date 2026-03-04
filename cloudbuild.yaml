@@ -1,0 +1,42 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/egap-repo/egap-acc:latest'
+      - '.'
+
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/egap-repo/egap-acc'
+
+  # Deploy to Cloud Run with Cloud SQL connection
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'egap-acc'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/egap-repo/egap-acc:latest'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '3001'
+      - '--add-cloudsql-instances'
+      - '${PROJECT_ID}:us-central1:egap-db'
+      - '--set-secrets'
+      - 'DB_PASSWORD=egap-db-password:latest'
+      - '--set-env-vars'
+      - 'DB_USER=postgres,DB_NAME=postgres,DB_SOCKET_PATH=/cloudsql/${PROJECT_ID}:us-central1:egap-db,NODE_ENV=production,PROJECT_ID=${PROJECT_ID},FACTORY_URL=https://egap-factory-910005263485.us-central1.run.app'
+
+# Store images in Artifact Registry
+images:
+  - 'us-central1-docker.pkg.dev/${PROJECT_ID}/egap-repo/egap-acc:latest'

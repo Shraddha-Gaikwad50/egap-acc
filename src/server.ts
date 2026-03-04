@@ -32,14 +32,54 @@ server.get('/api/health', async () => {
   return { status: 'ACC Online', system: 'EGAP Command Plane' };
 });
 
-// 2. Workforce Map (List all Agents)
+// 2. Workforce Map — A2A Orchestration View (Architecture Spec v1.0)
 server.get('/api/agents', async () => {
   const agents = await prisma.agent.findMany({
-    include: { tools: true }
+    include: {
+      tools: true,
+      deployments: true,
+      tasks: {
+        where: { status: 'PENDING' },
+        select: { id: true },
+      },
+    },
   });
+
+  const workforceMap = agents.map((agent: any) => {
+    const activeDeployment = agent.deployments?.find((d: any) => d.status === 'ACTIVE');
+    return {
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      goal: agent.goal,
+      isActive: agent.isActive,
+      version: `v${agent.currentVersion}`,
+      budgetUsd: agent.budgetUsd,
+      // A2A fields
+      adkResourceName: agent.adkResourceName || null,
+      agentCardUrl: agent.agentCardUrl || null,
+      // Capabilities
+      tools: agent.tools.map((t: any) => ({
+        name: t.name,
+        actionType: t.actionType || 'READ',
+        mcpServerUrl: t.mcpServerUrl || null,
+      })),
+      hasWriteTools: agent.tools.some((t: any) => t.actionType === 'WRITE'),
+      // Status
+      deploymentStatus: activeDeployment ? 'DEPLOYED' : 'NOT_DEPLOYED',
+      pendingTasks: agent.tasks?.length || 0,
+      // A2A Endpoints
+      endpoints: {
+        chat: `/api/chat`,
+        resume: `/api/agents/${agent.id}/resume`,
+        card: `/api/agents/${agent.id}/card`,
+      },
+    };
+  });
+
   return {
     count: agents.length,
-    agents: agents
+    agents: workforceMap,
   };
 });
 
@@ -78,43 +118,64 @@ server.get('/api/tasks/zombies', async () => {
   };
 });
 
-// 4. Approve a Task → publish RESUME signal to Pub/Sub
-server.post<{ Params: { id: string } }>('/api/tasks/:id/approve', async (request) => {
+// 4. Approve a Task → use A2A Resume Protocol (Architecture Spec v1.0)
+server.post<{ Params: { id: string }; Body: { feedback?: string } }>('/api/tasks/:id/approve', async (request) => {
   const approveStart = Date.now();
-  const task = await prisma.task.update({
+  const task = await prisma.task.findUnique({
     where: { id: request.params.id },
-    data: { status: 'APPROVED' },
     include: { agent: true },
   });
 
-  // Recover traceId from task input payload, or generate new one
-  const traceId = (task.inputPayload as any)?.traceId || randomUUID();
+  if (!task) throw new Error('Task not found');
 
-  // Publish RESUME signal so the orchestrator can continue
-  const resumePayload = {
-    type: 'RESUME',
-    taskId: task.id,
-    agentId: task.agentId,
-    traceId,
-  };
-  await pubsub.topic(topicName).publishMessage({
-    data: Buffer.from(JSON.stringify(resumePayload)),
-    attributes: { traceId },
-  });
-  console.log(`📤 Published RESUME signal for Task ${task.id}`);
+  const traceId = (task.inputPayload as any)?.traceId || randomUUID();
+  const feedback = (request.body as any)?.feedback || undefined;
+
+  // A2A Resume: Call Factory's resume endpoint for the agent
+  try {
+    const resumeRes = await fetch(`${FACTORY_URL}/api/agents/${task.agentId}/resume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taskId: task.id,
+        feedback,
+      }),
+    });
+
+    if (!resumeRes.ok) {
+      console.error(`❌ A2A Resume failed: ${resumeRes.statusText}`);
+    } else {
+      const resumeResult = await resumeRes.json() as any;
+      console.log(`✅ A2A Resume completed: ${resumeResult?.status}`);
+    }
+  } catch (err: any) {
+    console.error(`❌ A2A Resume call failed: ${err.message}`);
+    // Fall back to Pub/Sub if A2A Resume fails
+    const resumePayload = {
+      type: 'RESUME',
+      taskId: task.id,
+      agentId: task.agentId,
+      traceId,
+    };
+    await pubsub.topic(topicName).publishMessage({
+      data: Buffer.from(JSON.stringify(resumePayload)),
+      attributes: { traceId },
+    });
+    console.log(`📤 Fallback: Published RESUME via Pub/Sub for Task ${task.id}`);
+  }
 
   // FRS: Record approve trace span
   await prisma.traceSpan.create({
     data: {
       traceId,
       service: 'acc',
-      operation: 'approve_task',
+      operation: 'approve_task_a2a',
       durationMs: Date.now() - approveStart,
-      metadata: { taskId: task.id, agentName: task.agent.name },
+      metadata: { taskId: task.id, agentName: task.agent.name, protocol: 'a2a/1.0' },
     },
   });
 
-  return task;
+  return { ...task, status: 'APPROVED', protocol: 'a2a/1.0' };
 });
 
 // 5. Reject a Task
@@ -194,7 +255,7 @@ const discoveryStatus: DiscoveryStatus = {
 async function discoverAgents(): Promise<void> {
   try {
     const url = `${FACTORY_URL}/.well-known/agent.json`;
-    console.log(`🔍 Discovering agents from ${url}...`);
+    console.log(`🔍 Discovering agents via A2A Agent Card from ${url}...`);
     const res = await fetch(url);
     if (!res.ok) {
       discoveryStatus.error = `HTTP ${res.status} from Agent Card`;
@@ -203,7 +264,22 @@ async function discoverAgents(): Promise<void> {
     }
 
     const card = await res.json() as {
-      agents?: Array<{ id: string; name: string; role: string; goal: string; tools: string[] }>;
+      protocol?: string;
+      platform?: string;
+      agents?: Array<{
+        name: string;
+        description: string;
+        url: string | null;
+        version: string;
+        protocols: string[];
+        capabilities: {
+          tools: Array<{ name: string; actionType: string }>;
+          hitl: boolean;
+        };
+        status: string;
+        adkResourceName: string | null;
+        endpoints: { chat: string; resume: string; card: string };
+      }>;
     };
 
     if (!card.agents || !Array.isArray(card.agents)) {
@@ -216,24 +292,32 @@ async function discoverAgents(): Promise<void> {
     discoveryStatus.error = null;
 
     for (const agent of card.agents) {
-      // Upsert: create if not exists, update if name already exists
       const existing = await prisma.agent.findUnique({ where: { name: agent.name } });
       if (!existing) {
+        const [role, goal] = (agent.description || '').split(' — ');
         await prisma.agent.create({
           data: {
             name: agent.name,
-            role: agent.role,
-            goal: agent.goal,
-            systemPrompt: `Auto-registered from Agent Card (${agent.name})`,
+            role: role || 'Auto-discovered',
+            goal: goal || 'Discovered via A2A Agent Card',
+            systemPrompt: `Auto-registered from A2A Agent Card (${agent.name})`,
+            agentCardUrl: `${FACTORY_URL}/.well-known/agent.json`,
+            adkResourceName: agent.adkResourceName || null,
           },
         });
-        console.log(`✅ Auto-registered new agent: ${agent.name}`);
+        console.log(`✅ Auto-registered new agent via A2A: ${agent.name}`);
+      } else if (agent.adkResourceName && !existing.adkResourceName) {
+        // Sync ADK resource name if it was deployed after initial discovery
+        await prisma.agent.update({
+          where: { name: agent.name },
+          data: { adkResourceName: agent.adkResourceName },
+        });
       }
       discoveryStatus.agentsSynced.push(agent.name);
     }
 
     discoveryStatus.lastRun = new Date().toISOString();
-    console.log(`🔍 Discovery complete: ${card.agents.length} agents found, ${discoveryStatus.agentsSynced.length} synced`);
+    console.log(`🔍 A2A Discovery complete: ${card.agents.length} agents (protocol: ${card.protocol || 'unknown'})`);
   } catch (err: any) {
     discoveryStatus.error = err.message || 'Unknown error';
     console.log(`⚠️  Agent Card discovery error: ${discoveryStatus.error}`);
@@ -358,6 +442,30 @@ server.get('/api/reconciliation', async () => {
       totalTokens,
       totalCostUsd: totalCost,
     },
+  };
+});
+
+// 10. Autonomy Rate — Architecture Spec: (total_completions - hitl_interventions) / total_completions
+server.get('/api/autonomy-rate', async () => {
+  const totalMessages = await prisma.message.count({ where: { role: 'user' } });
+  const totalResponses = await prisma.message.count({ where: { role: 'assistant' } });
+  const totalHitlTasks = await prisma.task.count();
+  const completedTasks = await prisma.task.count({ where: { status: 'COMPLETED' } });
+  const rejectedTasks = await prisma.task.count({ where: { status: 'REJECTED' } });
+
+  const totalCompletions = totalResponses;
+  const hitlInterventions = totalHitlTasks;
+  const autonomyRate = totalCompletions > 0
+    ? Math.round(((totalCompletions - hitlInterventions) / totalCompletions) * 10000) / 100
+    : 100;
+
+  return {
+    autonomyRate: `${autonomyRate}%`,
+    totalCompletions,
+    hitlInterventions,
+    completedTasks,
+    rejectedTasks,
+    totalUserMessages: totalMessages,
   };
 });
 
