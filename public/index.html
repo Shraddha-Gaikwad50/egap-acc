@@ -598,6 +598,256 @@
             border-color: rgba(255, 85, 85, 0.25);
         }
 
+        .status-pill.discovery.error .dot {}
+
+        /* ── Workforce Map ──────────────────────────────────────── */
+        .workforce-section {
+            margin: 1.5rem 1rem 0;
+            background: linear-gradient(135deg, #0a0f1a 0%, #111827 100%);
+            border: 1px solid rgba(0, 212, 255, 0.12);
+            border-radius: 14px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .workforce-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(0, 212, 255, 0.04), transparent 70%);
+            pointer-events: none;
+        }
+
+        .workforce-section .panel-title {
+            color: #00d4ff;
+        }
+
+        .wf-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .wf-node {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 12px;
+            padding: 1.1rem;
+            position: relative;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .wf-node:hover {
+            border-color: rgba(0, 212, 255, 0.4);
+            box-shadow: 0 0 24px rgba(0, 212, 255, 0.08), inset 0 0 20px rgba(0, 212, 255, 0.03);
+            transform: translateY(-2px);
+        }
+
+        .wf-node .node-header {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .wf-node .node-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #00d4ff, #0066ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .wf-node .node-name {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .wf-node .node-role {
+            font-size: 0.65rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .wf-node .node-status {
+            margin-left: auto;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .wf-node .node-status.active {
+            background: #39ff14;
+            box-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .wf-node .node-status.inactive {
+            background: #555;
+        }
+
+        .wf-protocol-row {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.6rem;
+        }
+
+        .protocol-tag {
+            font-size: 0.55rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .protocol-tag.a2a {
+            background: rgba(0, 212, 255, 0.12);
+            color: #00d4ff;
+            border: 1px solid rgba(0, 212, 255, 0.25);
+        }
+
+        .protocol-tag.mcp {
+            background: rgba(168, 85, 247, 0.12);
+            color: #a855f7;
+            border: 1px solid rgba(168, 85, 247, 0.25);
+        }
+
+        .protocol-tag.hitl {
+            background: rgba(255, 184, 48, 0.12);
+            color: #ffb830;
+            border: 1px solid rgba(255, 184, 48, 0.25);
+        }
+
+        .protocol-tag.deployed {
+            background: rgba(16, 185, 129, 0.12);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .wf-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .wf-tool {
+            font-size: 0.6rem;
+            font-weight: 600;
+            padding: 0.18rem 0.45rem;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.04);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .wf-tool .dot-r {
+            color: #f87171;
+        }
+
+        /* read/search */
+        .wf-tool .dot-w {
+            color: #fbbf24;
+        }
+
+        /* write/send */
+
+        .wf-endpoints {
+            font-size: 0.6rem;
+            color: #475569;
+            font-family: 'SF Mono', monospace;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 0.5rem;
+        }
+
+        .wf-endpoints a {
+            color: #64748b;
+            text-decoration: none;
+            display: block;
+            padding: 0.1rem 0;
+        }
+
+        .wf-endpoints a:hover {
+            color: #00d4ff;
+        }
+
+        /* Autonomy Gauge */
+        .autonomy-gauge {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: rgba(0, 212, 255, 0.04);
+            border: 1px solid rgba(0, 212, 255, 0.1);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .gauge-ring {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            position: relative;
+            background: conic-gradient(#00d4ff var(--pct, 0%), #1e293b var(--pct, 0%));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .gauge-ring::after {
+            content: '';
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #0f172a;
+            position: absolute;
+        }
+
+        .gauge-ring .gauge-val {
+            position: relative;
+            z-index: 1;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #00d4ff;
+        }
+
+        .gauge-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .gauge-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .gauge-detail {
+            font-size: 0.6rem;
+            color: #64748b;
+        }
+
         .status-pill.discovery.error .dot {
             background: #ff5555;
         }
@@ -860,6 +1110,10 @@
         <div class="nav-pills">
             <span class="status-pill live"><span class="dot"></span> Live</span>
             <span class="status-pill discovery" id="discovery-pill"><span class="dot"></span> Discovery: —</span>
+            <a href="https://console.cloud.google.com/traces/list?project=gls-training-486405" target="_blank"
+                class="status-pill"
+                style="background:rgba(139,92,246,0.1);color:#a78bfa;border:1px solid rgba(139,92,246,0.25);text-decoration:none;cursor:pointer;"
+                title="Open Cloud Trace in GCP Console"><span>🔍</span> Cloud Trace</a>
             <button class="deploy-btn" id="deploy-btn" onclick="triggerDeploy()">🚀 Deploy Factory</button>
         </div>
     </header>
@@ -876,6 +1130,28 @@
             <span class="unit">USD</span>
         </div>
         <div class="cost-agents" id="cost-agents"></div>
+    </div>
+
+    <!-- ── Workforce Map ────────────────────────────────── -->
+    <div class="workforce-section" id="workforce-section">
+        <div class="panel-header">
+            <span class="panel-title"><span class="icon">🗺️</span> Workforce Map</span>
+            <span class="count-badge" id="wf-count"
+                style="background:rgba(0,212,255,0.12);color:#00d4ff;border:1px solid rgba(0,212,255,0.25)">—</span>
+        </div>
+        <div class="autonomy-gauge" id="autonomy-gauge">
+            <div class="gauge-ring" style="--pct:0%"><span class="gauge-val">—</span></div>
+            <div class="gauge-meta">
+                <span class="gauge-label">Autonomy Rate</span>
+                <span class="gauge-detail" id="autonomy-detail">Loading…</span>
+            </div>
+        </div>
+        <div class="wf-grid" id="wf-grid">
+            <div class="state-msg">
+                <div class="spinner"></div>
+                <p class="label">Loading workforce…</p>
+            </div>
+        </div>
     </div>
 
     <div class="split-view">
@@ -912,7 +1188,12 @@
     <div class="trace-section">
         <div class="panel-header">
             <span class="panel-title"><span class="icon">🔍</span> Trace Map</span>
-            <span class="count-badge" id="trace-count" style="background: #7c3aed;">—</span>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <span class="count-badge" id="trace-count" style="background: #7c3aed;">—</span>
+                <a href="https://console.cloud.google.com/traces/list?project=gls-training-486405" target="_blank"
+                    style="font-size:0.65rem;color:#a78bfa;text-decoration:none;padding:0.2rem 0.5rem;border:1px solid rgba(139,92,246,0.25);border-radius:6px;background:rgba(139,92,246,0.08);white-space:nowrap;"
+                    title="Open full Cloud Trace in GCP">↗ GCP Cloud Trace</a>
+            </div>
         </div>
         <div id="trace-list">
             <div class="state-msg">
@@ -1261,6 +1542,83 @@
             }
         }
 
+        // ── Load Workforce Map ────────────────────────────────
+        async function loadWorkforceMap() {
+            const grid = document.getElementById('wf-grid');
+            const badge = document.getElementById('wf-count');
+            const gaugeEl = document.getElementById('autonomy-gauge');
+
+            try {
+                // Fetch agents & autonomy in parallel
+                const [agentsRes, autonomyRes] = await Promise.all([
+                    fetch('/api/agents'),
+                    fetch('/api/autonomy-rate').catch(() => null)
+                ]);
+
+                if (!agentsRes.ok) throw new Error(`HTTP ${agentsRes.status}`);
+                const data = await agentsRes.json();
+                const agents = data.agents || data;
+                badge.textContent = agents.length;
+
+                // Autonomy gauge
+                if (autonomyRes && autonomyRes.ok) {
+                    const ar = await autonomyRes.json();
+                    const rate = parseFloat(ar.autonomyRate) || 0;
+                    const clampedRate = Math.max(0, Math.min(100, rate));
+                    const ring = gaugeEl.querySelector('.gauge-ring');
+                    ring.style.setProperty('--pct', clampedRate + '%');
+                    ring.querySelector('.gauge-val').textContent = ar.autonomyRate;
+                    document.getElementById('autonomy-detail').textContent =
+                        `${ar.completedTasks || 0} completed · ${ar.hitlInterventions || 0} HITL · ${ar.totalUserMessages || 0} user msgs`;
+                }
+
+                if (agents.length === 0) {
+                    grid.innerHTML = '<div class="state-msg"><div class="icon">🗺️</div><p class="label">No agents in workforce</p></div>';
+                    return;
+                }
+
+                const toolIcon = (name) => {
+                    const writes = ['send_email', 'save_file', 'deploy', 'execute', 'write', 'update', 'delete', 'create'];
+                    const isWrite = writes.some(w => name.toLowerCase().includes(w));
+                    return isWrite ? '<span class="dot-w">⚡</span>' : '<span class="dot-r">🔍</span>';
+                };
+
+                grid.innerHTML = agents.map((a, i) => {
+                    const tools = a.tools || [];
+                    const hasHitl = tools.some(t => t.actionType === 'WRITE' || ['send_email', 'save_file'].includes(t.name));
+                    const protocols = a.protocols || ['a2a/1.0', 'mcp/1.0'];
+                    const endpoints = a.endpoints || {};
+                    const avatarEmojis = ['🤖', '🧠', '⚡', '🛡️', '📡', '🔮'];
+
+                    return `<div class="wf-node">
+                        <div class="node-header">
+                            <div class="node-avatar">${avatarEmojis[i % avatarEmojis.length]}</div>
+                            <div>
+                                <div class="node-name">${esc(a.name)}</div>
+                                <div class="node-role">${esc(a.role || a.goal || '')}</div>
+                            </div>
+                            <div class="node-status ${a.isActive !== false ? 'active' : 'inactive'}"></div>
+                        </div>
+                        <div class="wf-protocol-row">
+                            ${protocols.map(p => `<span class="protocol-tag ${p.includes('a2a') ? 'a2a' : 'mcp'}">${p}</span>`).join('')}
+                            ${hasHitl ? '<span class="protocol-tag hitl">HITL</span>' : ''}
+                            ${a.deploymentStatus === 'DEPLOYED' ? '<span class="protocol-tag deployed">Deployed</span>' : ''}
+                        </div>
+                        <div class="wf-tools">
+                            ${tools.length > 0 ? tools.map(t => `<span class="wf-tool">${toolIcon(t.name)} ${esc(t.name)}</span>`).join('') : '<span class="wf-tool" style="color:#475569">No tools</span>'}
+                        </div>
+                        <div class="wf-endpoints">
+                            ${endpoints.card ? `<a href="${endpoints.card}" title="Agent Card">📄 ${endpoints.card}</a>` : ''}
+                            ${endpoints.resume ? `<a href="${endpoints.resume}" title="A2A Resume">🔄 ${endpoints.resume}</a>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+
+            } catch (err) {
+                grid.innerHTML = `<div class="state-msg"><div class="icon">⚠️</div><p class="label" style="color:#ff5555">Failed to load workforce</p><p class="hint">${esc(err.message)}</p></div>`;
+            }
+        }
+
         // ── Init ──────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', () => {
             loadAgents();
@@ -1269,6 +1627,7 @@
             loadDiscovery();
             loadTraces();
             loadReconciliation();
+            loadWorkforceMap();
 
             // Poll tasks every 2 seconds for real-time updates
             setInterval(loadTasks, 2000);
@@ -1277,6 +1636,7 @@
             setInterval(loadDiscovery, 15000);
             setInterval(loadTraces, 5000);
             setInterval(loadReconciliation, 5000);
+            setInterval(loadWorkforceMap, 10000);
         });
     </script>
 
